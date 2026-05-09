@@ -66,7 +66,6 @@
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../services/apiService'
@@ -113,6 +112,5 @@ async function remove(id) {
   await api.deleteProduct(id)
   await load()
 }
-
-export default { }
+// REMOVED: export default { }
 </script>
