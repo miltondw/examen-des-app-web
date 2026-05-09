@@ -1,0 +1,92 @@
+[
+    {
+        "id": 1,
+        "title": "Luz de Medianoche",
+        "genre": "Drama",
+        "price": 7.5,
+        "stock": 40,
+        "image": "https://via.placeholder.com/160x90?text=Luz",
+        "description": "Drama intimista sobre un regreso a casa."
+    },
+    {
+        "id": 2,
+        "title": "Nebula Run",
+        "genre": "Ciencia ficcion",
+        "price": 10.0,
+        "stock": 60,
+        "image": "https://via.placeholder.com/160x90?text=Nebula",
+        "description": "Carrera espacial que redefine fronteras."
+    },
+    {
+        "id": 3,
+        "title": "Risas en 8 Bits",
+        "genre": "Animacion",
+        "price": 6.0,
+        "stock": 80,
+        "image": "https://via.placeholder.com/160x90?text=Risas",
+        "description": "Aventura familiar en un arcade retro."
+    },
+    {
+        "id": 4,
+        "title": "Linea de Fuego",
+        "genre": "Accion",
+        "price": 8.5,
+        "stock": 35,
+        "image": "https://via.placeholder.com/160x90?text=Fuego",
+        "description": "Thriller de alto voltaje con misiones."
+    },
+    {
+        "id": 5,
+        "title": "Casa de Eco",
+        "genre": "Terror",
+        "price": 8.0,
+        "stock": 20,
+        "image": "https://via.placeholder.com/160x90?text=Eco",
+        "description": "Terror psicológico en una casa antigua."
+    },
+    {
+        "id": 6,
+        "title": "Amor en Abril",
+        "genre": "Drama",
+        "price": 7.0,
+        "stock": 50,
+        "image": "https://via.placeholder.com/160x90?text=Amor",
+        "description": "Romance estacional que florece lento."
+    },
+    {
+        "id": 7,
+        "title": "Guardians 2099",
+        "genre": "Ciencia ficcion",
+        "price": 11.0,
+        "stock": 45,
+        "image": "https://via.placeholder.com/160x90?text=Guardians",
+        "description": "Equipo rebelde protege la ultima ciudad."
+    },
+    {
+        "id": 8,
+        "title": "Viaje en Rojo",
+        "genre": "Accion",
+        "price": 8.25,
+        "stock": 30,
+        "image": "https://via.placeholder.com/160x90?text=Rojo",
+        "description": "Persecucion internacional de alto impacto."
+    },
+    {
+        "id": 9,
+        "title": "Sombras del Bosque",
+        "genre": "Terror",
+        "price": 7.75,
+        "stock": 25,
+        "image": "https://via.placeholder.com/160x90?text=Sombras",
+        "description": "Misterios que despiertan al anochecer."
+    },
+    {
+        "id": 10,
+        "title": "Pequeños Héroes",
+        "genre": "Animacion",
+        "price": 5.5,
+        "stock": 100,
+        "image": "https://via.placeholder.com/160x90?text=Heroes",
+        "description": "Aventuras infantiles con corazon grande."
+    }
+]
