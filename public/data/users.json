@@ -3,12 +3,14 @@
         "id": 1,
         "username": "admin",
         "password": "admin123",
-        "name": "Administrador"
+        "name": "Administrador",
+        "role": "admin"
     },
     {
         "id": 2,
         "username": "user",
         "password": "user123",
-        "name": "Usuario Demo"
+        "name": "Usuario Demo",
+        "role": "cliente"
     }
 ]
