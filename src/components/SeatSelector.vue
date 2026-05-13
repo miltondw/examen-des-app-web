@@ -1,25 +1,42 @@
 <template>
-  <div class="seat-selector-modal">
-    <div class="card p-3">
-      <h5>Selecciona asientos - {{ showtimeDisplay }}</h5>
-      <p class="small text-muted">Click para seleccionar; los asientos en rojo están ocupados.</p>
-      <div class="d-flex flex-column align-items-center">
-        <div v-for="r in rows" :key="r" class="d-flex gap-2 mb-2">
-          <button
-            v-for="c in cols"
-            :key="c"
-            type="button"
-            class="btn"
-            :class="seatClass(r, c)"
-            @click="toggleSeat(r, c)"
-          >
-            {{ r }}-{{ c }}
+  <div class="modal fade show d-block" tabindex="-1" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content seat-selector-modal">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title mb-0">Selecciona asientos</h5>
+            <p class="text-muted small mb-0">Horario: {{ showtimeDisplay }}</p>
+          </div>
+          <button type="button" class="btn-close" @click="$emit('close')" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+            <span class="badge text-bg-secondary">Disponible</span>
+            <span class="badge text-bg-success">Seleccionado</span>
+            <span class="badge text-bg-danger">Ocupado</span>
+          </div>
+          <p class="small text-muted mb-3">Los asientos ocupados están en rojo. Puedes elegir varios antes de confirmar.</p>
+          <div class="seat-grid-wrap">
+            <div v-for="r in rows" :key="r" class="d-flex flex-wrap justify-content-center gap-2">
+              <button
+                v-for="c in cols"
+                :key="c"
+                type="button"
+                class="btn seat-btn"
+                :class="seatClass(r, c)"
+                @click="toggleSeat(r, c)"
+              >
+                {{ r }}-{{ c }}
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" @click="$emit('close')">Cancelar</button>
+          <button class="btn btn-primary" :disabled="selected.length === 0" @click="confirm">
+            Confirmar compra ({{ selected.length }})
           </button>
         </div>
-      </div>
-      <div class="mt-3 d-flex justify-content-end gap-2">
-        <button class="btn btn-secondary" @click="$emit('close')">Cancelar</button>
-        <button class="btn btn-primary" @click="confirm">Confirmar compra ({{ selected.length }})</button>
       </div>
     </div>
   </div>
@@ -27,13 +44,14 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { formatShowtime } from '../utils/time'
+
 const props = defineProps({ occupied: Array, showtime: Object })
 const emit = defineEmits(['close', 'confirm'])
 
-// showtime puede ser un objeto { id, time, price, availableSeats } o string
 const showtimeDisplay = computed(() => {
-  if (typeof props.showtime === 'object' && props.showtime?.time) return props.showtime.time
-  return props.showtime || 'No horario'
+  if (typeof props.showtime === 'object' && props.showtime?.time) return formatShowtime(props.showtime.time)
+  return formatShowtime(props.showtime)
 })
 
 const rows = [1,2,3,4,5]
@@ -43,14 +61,14 @@ const selected = ref([])
 function seatKey(r,c){ return `${r}-${c}` }
 
 function isOccupied(r,c){
-  return (occupied || []).includes(seatKey(r,c))
+  return (props.occupied || []).includes(seatKey(r,c))
 }
 
 function seatClass(r,c){
   const k = seatKey(r,c)
   if (isOccupied(r,c)) return 'btn-danger disabled'
-  if (selected.value.includes(k)) return 'btn-primary'
-  return 'btn-outline-light'
+  if (selected.value.includes(k)) return 'btn-success'
+  return 'btn-outline-secondary'
 }
 
 function toggleSeat(r,c){
@@ -67,8 +85,15 @@ function confirm(){
 </script>
 
 <style scoped>
-.seat-selector-modal .btn { min-width: 48px }
-.btn-outline-light { background: rgba(255,255,255,0.03); color: #fff; border: 1px solid rgba(255,255,255,0.08) }
-.btn-primary { background: linear-gradient(135deg,#ffd29b,#ff9a3e); border: none }
-.btn-danger { background: rgba(255,100,100,0.9); color: #fff }
+.seat-selector-modal .modal-body {
+  background: #f8fafc;
+}
+
+.seat-grid-wrap {
+  max-height: 60vh;
+  overflow: auto;
+  padding: 0.5rem 0.25rem;
+}
+
+.seat-btn { min-width: 3.25rem; }
 </style>

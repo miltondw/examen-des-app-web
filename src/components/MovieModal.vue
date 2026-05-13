@@ -5,12 +5,12 @@
         <img :src="movie.image" alt="" style="width:180px; height:110px; object-fit:cover;" class="me-3" />
         <div class="flex-grow-1">
           <h4>{{ movie.title }}</h4>
-          <p class="small text-muted">{{ movie.genre }} • {{ movie.runtime }} min • {{ movie.rating }}</p>
+          <p class="small text-muted">{{ movie.genre }} • {{ movie.duration }} min • {{ movie.rating }}</p>
           <p class="small">{{ movie.description }}</p>
           <div class="mt-2">
             <p class="mb-1 small text-muted">Selecciona un horario:</p>
             <div class="d-flex flex-wrap gap-2">
-              <button v-for="t in movie.showtimes" :key="t.id" class="btn btn-warning btn-sm" @click="$emit('select-showtime', t)">{{ t.time }} - ${{ t.price }}</button>
+              <button v-for="t in movie.showtimes" :key="t.id" class="btn btn-warning btn-sm" @click="$emit('select-showtime', t)">{{ formatShowtime(t.time) }} - ${{ t.price }}</button>
             </div>
           </div>
         </div>
@@ -23,6 +23,8 @@
 </template>
 
 <script setup>
+import { formatShowtime } from '../utils/time'
+
 defineProps({ movie: Object })
 defineEmits(['close', 'select-showtime'])
 </script>

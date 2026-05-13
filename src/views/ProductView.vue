@@ -1,37 +1,48 @@
 <template>
-  <div>
-    <div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="container-fluid px-0">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
       <div>
-        <h2>Peliculas / Productos</h2>
-        <p class="text-muted small">CRUD simulado con LocalStorage (seed desde products.json)</p>
+        <h2 class="h3 mb-1">Películas</h2>
+        <p class="text-muted mb-0">Administra cartelera, horarios, precios y reservas.</p>
       </div>
       <div v-if="role === 'admin'">
-        <button class="btn btn-success" @click="openCreate">+ Nuevo</button>
+        <button class="btn btn-success" @click="openCreate">+ Nueva película</button>
       </div>
     </div>
 
-    <div class="row row-cols-1 row-cols-md-2 g-3">
-      <div v-for="p in products" :key="p.id" class="col">
-        <div class="card h-100">
-          <div class="row g-0">
-            <div class="col-4">
-              <img :src="p.image" class="img-fluid rounded-start" alt="" />
+    <div class="row row-cols-1 row-cols-xl-2 g-4">
+      <div v-for="movie in products" :key="movie.id" class="col">
+        <div class="card h-100 shadow-sm">
+          <div class="row g-0 h-100">
+            <div class="col-md-4">
+              <img :src="movie.image" class="img-fluid h-100 w-100 object-fit-cover rounded-start" :alt="movie.title" />
             </div>
-            <div class="col-8">
-              <div class="card-body d-flex flex-column">
-                <h5 class="card-title">{{ p.title }}</h5>
-                <p class="card-text text-muted small">{{ p.genre }} • ${{ p.price }}</p>
-                <p class="card-text small">{{ p.description }}</p>
-                <div class="mt-auto d-flex gap-2 align-items-center">
+            <div class="col-md-8">
+              <div class="card-body d-flex flex-column h-100">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <div>
+                    <h5 class="card-title mb-1">{{ movie.title }}</h5>
+                    <p class="text-muted small mb-2">{{ movie.genre }} • {{ movie.duration }} min • {{ movie.rating }}</p>
+                  </div>
+                  <span class="badge text-bg-dark">Desde {{ formatMoney(movieBasePrice(movie)) }}</span>
+                </div>
+
+                <p class="card-text text-muted small mb-3">{{ movie.description }}</p>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                  <span v-for="showtime in movie.showtimes" :key="showtime.id" class="badge text-bg-secondary">
+                    {{ formatShowtime(showtime.time) }} - {{ formatMoney(showtime.price) }}
+                  </span>
+                </div>
+
+                <div class="mt-auto d-flex flex-wrap gap-2">
                   <template v-if="role === 'admin'">
-                    <button class="btn btn-sm btn-primary" @click="startEdit(p)">Editar</button>
-                    <button class="btn btn-sm btn-danger" @click="remove(p.id)">Eliminar</button>
-                    <button class="btn btn-sm btn-outline-secondary" @click="viewReservations(p)">Ver reservas</button>
+                    <button class="btn btn-primary btn-sm" @click="startEdit(movie)">Editar</button>
+                    <button class="btn btn-outline-danger btn-sm" @click="askDelete(movie)">Eliminar</button>
+                    <button class="btn btn-outline-secondary btn-sm" @click="viewReservations(movie)">Ver reservas</button>
                   </template>
                   <template v-else>
-                    <div class="d-flex gap-2">
-                      <button class="btn btn-sm btn-primary" @click="openMovieModal(p)">Ver y seleccionar</button>
-                    </div>
+                    <button class="btn btn-primary btn-sm" @click="openMovieModal(movie)">Seleccionar función</button>
                   </template>
                 </div>
               </div>
@@ -40,58 +51,56 @@
         </div>
       </div>
     </div>
-    
+
     <MovieModal v-if="showMovieModal" :movie="modalMovie" @close="closeMovieModal" @select-showtime="onModalSelectShowtime" />
+
     <SeatSelector v-if="showSeatSelector" :occupied="occupiedSeats" :showtime="currentShowtime" @close="closeSeatSelector" @confirm="confirmSeats" />
 
-    <div v-if="showReservations" class="card p-3 mt-3">
-      <h5>Reservas para {{ reservationsForMovie?.title }}</h5>
-      <ul class="list-group">
-        <li v-for="r in reservations" :key="r.id" class="list-group-item d-flex justify-content-between align-items-center">
-          <div>
-            <strong>{{ r.user.name }}</strong> - {{ r.showtime }} - {{ r.seats.join(', ') }}
-          </div>
-          <div class="text-muted small">ID: {{ r.id }}</div>
-        </li>
-      </ul>
-      <div class="mt-2 text-end"><button class="btn btn-secondary btn-sm" @click="showReservations=false">Cerrar</button></div>
-    </div>
+    <ProductFormModal v-if="showForm" :visible="showForm" :movie="editingMovie" :title="editId ? 'Editar película' : 'Nueva película'" @close="closeForm" @save="saveMovie" />
 
-    <div v-if="role === 'admin' && showForm" class="card p-3 mt-3">
-      <h5>{{ editId ? 'Editar' : 'Crear' }} pelicula</h5>
-      <form @submit.prevent="save">
-        <div class="row g-2">
-          <div class="col-md-6">
-            <input v-model="form.title" class="form-control" placeholder="Titulo" required />
-          </div>
-          <div class="col-md-3">
-            <input v-model="form.genre" class="form-control" placeholder="Genero" required />
-          </div>
-          <div class="col-md-3">
-            <input v-model.number="form.price" class="form-control" placeholder="Precio" required />
+    <ConfirmModal v-if="showDeleteModal" title="Eliminar película" :message="deleteTarget ? `¿Eliminar ${deleteTarget.title}? Esta acción no se puede deshacer.` : ''" @close="closeDeleteModal" @confirm="confirmDelete" />
+
+    <div v-if="showReservations" class="card mt-4">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <strong>Reservas de {{ reservationsForMovie?.title }}</strong>
+          <div class="small text-muted">Separadas por horario</div>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary" @click="showReservations = false">Cerrar</button>
+      </div>
+      <div class="card-body">
+        <div v-if="groupedReservations.length === 0" class="alert alert-info mb-0">
+          Todavía no hay reservas para esta película.
+        </div>
+        <div v-for="group in groupedReservations" :key="group.showtime" class="mb-4">
+          <h6 class="mb-3">Horario {{ group.showtime }}</h6>
+          <div class="list-group">
+            <div v-for="reservation in group.items" :key="reservation.id" class="list-group-item">
+              <div class="d-flex justify-content-between gap-3">
+                <div>
+                  <strong>{{ reservation.user.name }}</strong>
+                  <div class="text-muted small">{{ reservation.user.username }}</div>
+                </div>
+                <div class="text-end">
+                  <div class="fw-semibold">{{ reservation.seats.join(', ') }}</div>
+                  <div class="text-muted small">{{ reservation.seats.length }} puestos</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="row g-2 mt-2">
-          <div class="col-md-3">
-            <input v-model.number="form.stock" class="form-control" placeholder="Stock" required />
-          </div>
-          <div class="col-md-9">
-            <input v-model="form.image" class="form-control" placeholder="URL imagen" />
-          </div>
-        </div>
-        <div class="mt-3">
-          <button class="btn btn-primary me-2">Guardar</button>
-          <button type="button" class="btn btn-secondary" @click="closeForm">Cancelar</button>
-        </div>
-      </form>
+      </div>
     </div>
   </div>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import api from '../services/apiService'
 import SeatSelector from '../components/SeatSelector.vue'
 import MovieModal from '../components/MovieModal.vue'
+import ProductFormModal from '../components/ProductFormModal.vue'
+import ConfirmModal from '../components/ConfirmModal.vue'
+import { formatShowtime, formatMoney } from '../utils/time'
 
 const currentUser = JSON.parse(localStorage.getItem('current_user') || 'null')
 const role = currentUser?.role || 'client'
@@ -99,7 +108,7 @@ const role = currentUser?.role || 'client'
 const products = ref([])
 const showForm = ref(false)
 const editId = ref(null)
-const form = ref({ title: '', genre: '', price: 0, stock: 0, image: '', description: '' })
+const editingMovie = ref(null)
 const showSeatSelector = ref(false)
 const currentMovie = ref(null)
 const currentShowtime = ref('')
@@ -107,10 +116,11 @@ const occupiedSeats = ref([])
 const reservations = ref([])
 const reservationsForMovie = ref(null)
 const showReservations = ref(false)
-// role already read above
 
 const showMovieModal = ref(false)
 const modalMovie = ref(null)
+const showDeleteModal = ref(false)
+const deleteTarget = ref(null)
 
 async function load() {
   products.value = await api.getProducts()
@@ -120,13 +130,13 @@ onMounted(load)
 
 function openCreate() {
   editId.value = null
-  form.value = { title: '', genre: '', price: 0, stock: 0, image: '', description: '' }
+  editingMovie.value = null
   showForm.value = true
 }
 
 function startEdit(p) {
   editId.value = p.id
-  form.value = { ...p }
+  editingMovie.value = { ...p }
   showForm.value = true
 }
 
@@ -134,26 +144,52 @@ function closeForm() {
   showForm.value = false
 }
 
-async function save() {
+function normalizeMovie(movie) {
+  const showtimes = Array.isArray(movie?.showtimes) ? movie.showtimes : []
+
+  return {
+    ...movie,
+    duration: Number(movie.duration || 0),
+    showtimes: showtimes.map((showtime, index) => ({
+      id: showtime.id ?? Date.now() + index,
+      time: formatShowtime(showtime.time || ''),
+      price: Number(showtime.price || 0),
+      availableSeats: Number(showtime.availableSeats || 0),
+    })),
+  }
+}
+
+async function saveMovie(movie) {
+  const payload = normalizeMovie(movie)
   if (editId.value) {
-    await api.updateProduct(editId.value, form.value)
+    await api.updateProduct(editId.value, payload)
   } else {
-    await api.createProduct(form.value)
+    await api.createProduct(payload)
   }
   showForm.value = false
   await load()
 }
 
-async function remove(id) {
-  if (!confirm('Eliminar este producto?')) return
-  await api.deleteProduct(id)
+function askDelete(movie) {
+  deleteTarget.value = movie
+  showDeleteModal.value = true
+}
+
+function closeDeleteModal() {
+  showDeleteModal.value = false
+  deleteTarget.value = null
+}
+
+async function confirmDelete() {
+  if (!deleteTarget.value) return
+  await api.deleteProduct(deleteTarget.value.id)
+  closeDeleteModal()
   await load()
 }
 
 function openSeatSelector(movie, showtime){
   currentMovie.value = movie
   currentShowtime.value = showtime
-  // calcular asientos ocupados desde reservas (comparar con la hora del showtime)
   const showtimeHour = typeof showtime === 'object' ? showtime.time : showtime
   api.getReservationsByMovie(movie.id).then((list)=>{
     const occ = list.filter(r=>r.showtime===showtimeHour).flatMap(r=>r.seats)
@@ -181,7 +217,14 @@ async function confirmSeats(selected){
   const user = JSON.parse(localStorage.getItem('current_user'))
   if (!user) { alert('Debe iniciar sesion'); return }
   const showtimeStr = typeof currentShowtime.value === 'object' ? currentShowtime.value.time : currentShowtime.value
-  const res = await api.createReservation({ movieId: currentMovie.value.id, movieTitle: currentMovie.value.title, showtime: showtimeStr, seats: selected, user: user })
+  const res = await api.createReservation({
+    movieId: currentMovie.value.id,
+    movieTitle: currentMovie.value.title,
+    showtime: showtimeStr,
+    showtimePrice: currentShowtime.value?.price ?? null,
+    seats: selected,
+    user,
+  })
   showSeatSelector.value = false
   alert('Compra registrada: ' + res.id)
 }
@@ -191,5 +234,26 @@ async function viewReservations(movie){
   reservations.value = await api.getReservationsByMovie(movie.id)
   showReservations.value = true
 }
-// REMOVED: export default { }
+
+function movieBasePrice(movie) {
+  const prices = (movie.showtimes || []).map((showtime) => Number(showtime.price || 0)).filter((price) => price > 0)
+  if (prices.length === 0) return '0'
+  return Math.min(...prices)
+}
+
+const groupedReservations = computed(() => {
+  const groups = new Map()
+
+  for (const reservation of reservations.value) {
+    const key = reservation.showtime || 'Sin horario'
+    if (!groups.has(key)) {
+      groups.set(key, [])
+    }
+    groups.get(key).push(reservation)
+  }
+
+  return [...groups.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([showtime, items]) => ({ showtime, items }))
+})
 </script>
