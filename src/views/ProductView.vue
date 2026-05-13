@@ -39,7 +39,9 @@
                   <template v-if="role === 'admin'">
                     <button class="btn btn-primary btn-sm" @click="startEdit(movie)">Editar</button>
                     <button class="btn btn-outline-danger btn-sm" @click="askDelete(movie)">Eliminar</button>
-                    <button class="btn btn-outline-secondary btn-sm" @click="viewReservations(movie)">Ver reservas</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @click="viewReservations(movie)">
+                      Ver reservas
+                    </button>
                   </template>
                   <template v-else>
                     <button class="btn btn-primary btn-sm" @click="openMovieModal(movie)">Seleccionar función</button>
@@ -56,31 +58,121 @@
       <p v-if="modalMovie">{{ modalMovie.title }}</p>
     </FormModal>
 
-    <SeatSelector v-if="showSeatSelector" :occupiedSeats="occupiedSeats" :selectedSeats="[]" @toggle-seat="handleToggleSeat" />
+    <SeatSelector 
+      v-if="showSeatSelector" 
+      :occupiedSeats="occupiedSeats" 
+      :selectedSeats="selectedSeats"
+      :pricePerSeat="currentShowtime?.price || 0"
+      @toggle-seat="handleToggleSeat"
+      @confirm="confirmSeats"
+      @cancel="closeSeatSelector"
+    />
 
-    <FormModal v-if="showForm" :isOpen="showForm" :title="editId ? 'Editar película' : 'Nueva película'" @close="closeForm" @submit="saveMovie">
-      <!-- Form content will go here -->
+    <SuccessModal 
+      v-if="showSuccessModal"
+      :isOpen="showSuccessModal"
+      :reservationId="lastReservationId"
+      :seatCount="selectedSeats.length"
+      :totalPrice="formatMoney(selectedSeats.length * (currentShowtime?.price || 0))"
+      @close="closeSuccessModal"
+    />
+
+    <FormModal
+      v-if="showForm"
+      :isOpen="showForm"
+      :title="editId ? 'Editar película' : 'Nueva película'"
+      submitText="Guardar película"
+      @close="closeForm"
+      @submit="saveMovie(movieForm)"
+    >
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label class="form-label fw-semibold">Título</label>
+          <input v-model="movieForm.title" class="form-control" type="text" required />
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label fw-semibold">Género</label>
+          <input v-model="movieForm.genre" class="form-control" type="text" required />
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label fw-semibold">Duración (min)</label>
+          <input v-model.number="movieForm.duration" class="form-control" type="number" min="1" required />
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label fw-semibold">Clasificación</label>
+          <input v-model="movieForm.rating" class="form-control" type="text" placeholder="PG-13" required />
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label fw-semibold">Imagen URL</label>
+          <input v-model="movieForm.image" class="form-control" type="url" required />
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Descripción</label>
+          <textarea v-model="movieForm.description" class="form-control" rows="3" required></textarea>
+        </div>
+      </div>
+
+      <div class="border rounded-3 p-3 bg-light">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <h6 class="mb-0">Horarios</h6>
+          <button type="button" class="btn btn-outline-primary btn-sm" @click="addShowtime">+ Agregar horario</button>
+        </div>
+
+        <div v-if="movieForm.showtimes.length === 0" class="alert alert-warning mb-0">
+          Agrega al menos un horario para guardar la película.
+        </div>
+
+        <div v-for="(showtime, index) in movieForm.showtimes" :key="showtime.id" class="row g-2 align-items-end mb-3">
+          <div class="col-12 col-md-4">
+            <label class="form-label small text-muted">Hora</label>
+            <input v-model="showtime.time" class="form-control" type="text" placeholder="19:00 o 7:00pm" required />
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label small text-muted">Precio COP</label>
+            <input v-model.number="showtime.price" class="form-control" type="number" min="0" required />
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label small text-muted">Puestos</label>
+            <input v-model.number="showtime.availableSeats" class="form-control" type="number" min="1" required />
+          </div>
+          <div class="col-12 col-md-1 d-grid">
+            <button type="button" class="btn btn-outline-danger" @click="removeShowtime(index)">×</button>
+          </div>
+        </div>
+      </div>
     </FormModal>
 
-    <ConfirmDialog v-if="showDeleteModal" :isOpen="showDeleteModal" message="deleteTarget ? `¿Eliminar ${deleteTarget.title}? Esta acción no se puede deshacer.` : ''" confirmText="Eliminar" confirmVariant="danger" @confirm="confirmDelete" @cancel="closeDeleteModal" />
+    <ConfirmDialog 
+      v-if="showDeleteModal" 
+      :isOpen="showDeleteModal" 
+      :message="`¿Eliminar ${deleteTarget?.title}? Esta acción no se puede deshacer.`" 
+      confirmText="Eliminar" 
+      confirmVariant="danger" 
+      @confirm="confirmDelete" 
+      @cancel="closeDeleteModal" 
+    />
 
-    <div v-if="showReservations" class="card mt-4">
-      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div>
-          <strong>Reservas de {{ reservationsForMovie?.title }}</strong>
-          <div class="small text-muted">Separadas por horario</div>
-        </div>
-        <button class="btn btn-sm btn-outline-secondary" @click="showReservations = false">Cerrar</button>
-      </div>
-      <div class="card-body">
+    <Modal
+      v-if="showReservations"
+      :isOpen="showReservations"
+      :title="`Reservas de ${reservationsForMovie?.title || 'película'}`"
+      @close="closeReservations"
+    >
+      <div class="d-grid gap-3">
+        <p class="text-muted mb-0">Separadas por horario</p>
+
         <div v-if="groupedReservations.length === 0" class="alert alert-info mb-0">
           Todavía no hay reservas para esta película.
         </div>
-        <div v-for="group in groupedReservations" :key="group.showtime" class="mb-4">
-          <h6 class="mb-3">Horario {{ group.showtime }}</h6>
+
+        <div v-for="group in groupedReservations" :key="group.showtime" class="border rounded-3 p-3 bg-light">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <h6 class="mb-0">Horario {{ group.showtime }}</h6>
+            <span class="badge text-bg-secondary">{{ group.items.length }} reservas</span>
+          </div>
           <div class="list-group">
             <div v-for="reservation in group.items" :key="reservation.id" class="list-group-item">
-              <div class="d-flex justify-content-between gap-3">
+              <div class="d-flex justify-content-between gap-3 flex-wrap">
                 <div>
                   <strong>{{ reservation.user.name }}</strong>
                   <div class="text-muted small">{{ reservation.user.username }}</div>
@@ -94,14 +186,30 @@
           </div>
         </div>
       </div>
-    </div>
+
+      <template #footer>
+        <button type="button" class="btn btn-secondary" @click="closeReservations">Cerrar</button>
+      </template>
+    </Modal>
   </div>
 </template>
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import api from '../services/apiService'
-import { SeatSelector, FormModal, ConfirmDialog } from '@/components'
+import { Modal, SeatSelector, FormModal, ConfirmDialog, SuccessModal } from '@/components'
 import { formatShowtime, formatMoney } from '../utils/time'
+
+function createEmptyMovie() {
+  return {
+    title: '',
+    genre: '',
+    duration: 0,
+    rating: '',
+    image: '',
+    description: '',
+    showtimes: [],
+  }
+}
 
 const currentUser = JSON.parse(localStorage.getItem('current_user') || 'null')
 const role = currentUser?.role || 'client'
@@ -109,14 +217,18 @@ const role = currentUser?.role || 'client'
 const products = ref([])
 const showForm = ref(false)
 const editId = ref(null)
-const editingMovie = ref(null)
+const editingMovie = ref(createEmptyMovie())
+const movieForm = editingMovie
 const showSeatSelector = ref(false)
 const currentMovie = ref(null)
 const currentShowtime = ref('')
 const occupiedSeats = ref([])
+const selectedSeats = ref([])
 const reservations = ref([])
 const reservationsForMovie = ref(null)
 const showReservations = ref(false)
+const showSuccessModal = ref(false)
+const lastReservationId = ref(null)
 
 const showMovieModal = ref(false)
 const modalMovie = ref(null)
@@ -131,18 +243,46 @@ onMounted(load)
 
 function openCreate() {
   editId.value = null
-  editingMovie.value = null
+  editingMovie.value = createEmptyMovie()
   showForm.value = true
 }
 
 function startEdit(p) {
   editId.value = p.id
-  editingMovie.value = { ...p }
+  editingMovie.value = {
+    title: p.title || '',
+    genre: p.genre || '',
+    duration: Number(p.duration || 0),
+    rating: p.rating || '',
+    image: p.image || '',
+    description: p.description || '',
+    showtimes: Array.isArray(p.showtimes)
+      ? p.showtimes.map((showtime) => ({
+          id: showtime.id ?? Date.now(),
+          time: showtime.time || '',
+          price: Number(showtime.price || 0),
+          availableSeats: Number(showtime.availableSeats || 0),
+        }))
+      : [],
+  }
   showForm.value = true
 }
 
 function closeForm() {
   showForm.value = false
+}
+
+function addShowtime() {
+  editingMovie.value.showtimes.push({
+    id: Date.now() + Math.random(),
+    time: '',
+    price: 0,
+    availableSeats: 1,
+  })
+}
+
+function removeShowtime(index) {
+  editingMovie.value.showtimes.splice(index, 1)
 }
 
 function normalizeMovie(movie) {
@@ -153,7 +293,7 @@ function normalizeMovie(movie) {
     duration: Number(movie.duration || 0),
     showtimes: showtimes.map((showtime, index) => ({
       id: showtime.id ?? Date.now() + index,
-      time: formatShowtime(showtime.time || ''),
+      time: showtime.time || '',
       price: Number(showtime.price || 0),
       availableSeats: Number(showtime.availableSeats || 0),
     })),
@@ -188,6 +328,27 @@ async function confirmDelete() {
   await load()
 }
 
+function handleToggleSeat(seat) {
+  const index = selectedSeats.value.indexOf(seat)
+  if (index > -1) {
+    selectedSeats.value.splice(index, 1)
+  } else {
+    if (selectedSeats.value.length < 6) {
+      selectedSeats.value.push(seat)
+    }
+  }
+}
+
+function closeSeatSelector() {
+  showSeatSelector.value = false
+  selectedSeats.value = []
+}
+
+function closeSuccessModal() {
+  showSuccessModal.value = false
+  selectedSeats.value = []
+}
+
 function openSeatSelector(movie, showtime){
   currentMovie.value = movie
   currentShowtime.value = showtime
@@ -212,28 +373,50 @@ function onModalSelectShowtime(time){
   showMovieModal.value = false
 }
 
-function closeSeatSelector(){ showSeatSelector.value = false }
-
 async function confirmSeats(selected){
   const user = JSON.parse(localStorage.getItem('current_user'))
-  if (!user) { alert('Debe iniciar sesion'); return }
+  if (!user) { alert('Debe iniciar sesión'); return }
+  
+  // Max 6 seats validation
+  if (selected.length > 6) {
+    alert('No puedes seleccionar más de 6 puestos');
+    return
+  }
+  
+  if (selected.length === 0) {
+    alert('Debes seleccionar al menos 1 puesto');
+    return
+  }
+  
   const showtimeStr = typeof currentShowtime.value === 'object' ? currentShowtime.value.time : currentShowtime.value
+  const showtimePrice = currentShowtime.value?.price ?? 0
+  const totalPrice = selected.length * showtimePrice
+  
   const res = await api.createReservation({
     movieId: currentMovie.value.id,
     movieTitle: currentMovie.value.title,
     showtime: showtimeStr,
-    showtimePrice: currentShowtime.value?.price ?? null,
+    showtimePrice: showtimePrice,
     seats: selected,
     user,
   })
+  
+  lastReservationId.value = res.id
   showSeatSelector.value = false
-  alert('Compra registrada: ' + res.id)
+  showSuccessModal.value = true
+  selectedSeats.value = []
 }
 
 async function viewReservations(movie){
   reservationsForMovie.value = movie
   reservations.value = await api.getReservationsByMovie(movie.id)
   showReservations.value = true
+}
+
+function closeReservations() {
+  showReservations.value = false
+  reservationsForMovie.value = null
+  reservations.value = []
 }
 
 function movieBasePrice(movie) {

@@ -86,15 +86,5 @@ async function submit() {
 </script>
 
 <style scoped>
-.min-vh-100 { min-height: 100vh; }
-.form-control:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 0.2rem rgba(44, 62, 80, 0.1);
-}
-.btn-primary {
-  background: var(--primary);
-}
-.btn-primary:hover {
-  background: var(--secondary);
-}
+/* Bootstrap handles all styling */
 </style>

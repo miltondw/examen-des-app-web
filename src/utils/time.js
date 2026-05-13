@@ -26,10 +26,10 @@ export function formatMoney(value) {
   const numberValue = Number(value);
   if (Number.isNaN(numberValue)) return "$0";
 
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("es-CO", {
     style: "currency",
-    currency: "USD",
+    currency: "COP",
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   }).format(numberValue);
 }

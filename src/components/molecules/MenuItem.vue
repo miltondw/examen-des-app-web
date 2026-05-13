@@ -2,12 +2,12 @@
   <router-link
     :to="to"
     :class="[
-      'menu-item',
-      { 'menu-item-active': isActive }
+      'nav-link d-flex align-items-center gap-2 rounded-3 px-3 py-2 text-white',
+      { 'active bg-primary text-white': isActive, 'text-white-50': !isActive }
     ]"
     :aria-current="isActive ? 'page' : undefined"
   >
-    <span v-if="icon" class="menu-icon" aria-hidden="true">{{ icon }}</span>
+    <span v-if="icon" aria-hidden="true">{{ icon }}</span>
     <span>{{ label }}</span>
   </router-link>
 </template>

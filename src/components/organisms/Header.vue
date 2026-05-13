@@ -1,5 +1,5 @@
 <template>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3 shadow-sm">
     <div class="container-fluid">
       <router-link class="navbar-brand fw-bold" to="/dashboard/peliculas">
         Cine Leonelda
@@ -44,14 +44,3 @@ function logout() {
   router.push('/login')
 }
 </script>
-
-<style scoped>
-.navbar-brand {
-  font-weight: 700;
-  font-size: 1.5rem;
-}
-
-.navbar {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-</style>

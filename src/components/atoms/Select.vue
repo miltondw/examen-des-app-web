@@ -46,19 +46,5 @@ defineEmits(['update:modelValue'])
 </script>
 
 <style scoped>
-.form-select {
-  border-radius: 6px;
-  border: 1px solid var(--gray-300, #d1d5db);
-  transition: border-color 0.3s ease;
-}
-
-.form-select:focus {
-  border-color: var(--primary, #2c3e50);
-  box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
-}
-
-.form-select:disabled {
-  background-color: var(--gray-100, #f3f4f6);
-  cursor: not-allowed;
-}
+/* Bootstrap handles all styling */
 </style>

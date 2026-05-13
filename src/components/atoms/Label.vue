@@ -23,13 +23,5 @@ defineProps({
 </script>
 
 <style scoped>
-.form-label {
-  color: var(--gray-900, #111827);
-  margin-bottom: 0.5rem;
-  display: block;
-}
-
-.text-danger {
-  color: var(--danger, #e74c3c);
-}
+/* Bootstrap handles styling */
 </style>

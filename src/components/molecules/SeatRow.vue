@@ -12,7 +12,7 @@
         ]"
         :disabled="isSeatOccupied(seatNum)"
         @click="toggleSeat(seatNum)"
-        :title="`${rowLetter}${seatNum}`"
+        :title="`${rowLetter}-${seatNum}`"
       >
         {{ seatNum }}
       </button>
@@ -21,7 +21,8 @@
 </template>
 
 <script setup>
-defineProps({
+
+const props = defineProps({
   rowLetter: {
     type: String,
     required: true,
@@ -37,18 +38,18 @@ defineProps({
   }
 })
 
-defineEmits(['toggle-seat'])
+const emit = defineEmits(['toggle-seat'])
 
 const isSeatOccupied = (seatNum) => {
-  return occupiedSeats.value.some(s => s.row === rowLetter.value && s.seat === seatNum)
+  return props.occupiedSeats.some(s => s === `${props.rowLetter}-${seatNum}`)
 }
 
 const isSelected = (seatNum) => {
-  return selectedSeats.value.some(s => s.row === rowLetter.value && s.seat === seatNum)
+  return props.selectedSeats.some(s => s === `${props.rowLetter}-${seatNum}`)
 }
 
 const toggleSeat = (seatNum) => {
-  const seat = { row: rowLetter.value, seat: seatNum }
+  const seat = `${props.rowLetter}-${seatNum}`
   emit('toggle-seat', seat)
 }
 </script>

@@ -1,5 +1,5 @@
 <template>
-  <div class="form-field">
+  <div class="mb-3">
     <Label :forId="id" :required="required">
       {{ label }}
     </Label>
@@ -84,17 +84,5 @@ defineEmits(['update:modelValue'])
 </script>
 
 <style scoped>
-.form-field {
-  margin-bottom: 1rem;
-}
-
-.text-danger {
-  color: var(--danger, #e74c3c);
-  font-size: 0.875rem;
-}
-
-.text-muted {
-  color: var(--gray-500, #6b7280);
-  font-size: 0.875rem;
-}
+/* Bootstrap handles all styling */
 </style>

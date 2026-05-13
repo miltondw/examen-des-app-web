@@ -59,15 +59,5 @@ const sizeClass = computed(() => {
 </script>
 
 <style scoped>
-.text-muted {
-  color: var(--gray-500, #6b7280);
-}
-
-.fw-bold {
-  font-weight: 600;
-}
-
-.text-center {
-  text-align: center;
-}
+/* Bootstrap handles all styling */
 </style>
