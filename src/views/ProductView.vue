@@ -52,13 +52,17 @@
       </div>
     </div>
 
-    <MovieModal v-if="showMovieModal" :movie="modalMovie" @close="closeMovieModal" @select-showtime="onModalSelectShowtime" />
+    <FormModal v-if="showMovieModal" :isOpen="showMovieModal" :title="'Seleccionar función'" @close="closeMovieModal" @submit="onModalSelectShowtime">
+      <p v-if="modalMovie">{{ modalMovie.title }}</p>
+    </FormModal>
 
-    <SeatSelector v-if="showSeatSelector" :occupied="occupiedSeats" :showtime="currentShowtime" @close="closeSeatSelector" @confirm="confirmSeats" />
+    <SeatSelector v-if="showSeatSelector" :occupiedSeats="occupiedSeats" :selectedSeats="[]" @toggle-seat="handleToggleSeat" />
 
-    <ProductFormModal v-if="showForm" :visible="showForm" :movie="editingMovie" :title="editId ? 'Editar película' : 'Nueva película'" @close="closeForm" @save="saveMovie" />
+    <FormModal v-if="showForm" :isOpen="showForm" :title="editId ? 'Editar película' : 'Nueva película'" @close="closeForm" @submit="saveMovie">
+      <!-- Form content will go here -->
+    </FormModal>
 
-    <ConfirmModal v-if="showDeleteModal" title="Eliminar película" :message="deleteTarget ? `¿Eliminar ${deleteTarget.title}? Esta acción no se puede deshacer.` : ''" @close="closeDeleteModal" @confirm="confirmDelete" />
+    <ConfirmDialog v-if="showDeleteModal" :isOpen="showDeleteModal" message="deleteTarget ? `¿Eliminar ${deleteTarget.title}? Esta acción no se puede deshacer.` : ''" confirmText="Eliminar" confirmVariant="danger" @confirm="confirmDelete" @cancel="closeDeleteModal" />
 
     <div v-if="showReservations" class="card mt-4">
       <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -96,10 +100,7 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import api from '../services/apiService'
-import SeatSelector from '../components/SeatSelector.vue'
-import MovieModal from '../components/MovieModal.vue'
-import ProductFormModal from '../components/ProductFormModal.vue'
-import ConfirmModal from '../components/ConfirmModal.vue'
+import { SeatSelector, FormModal, ConfirmDialog } from '@/components'
 import { formatShowtime, formatMoney } from '../utils/time'
 
 const currentUser = JSON.parse(localStorage.getItem('current_user') || 'null')
