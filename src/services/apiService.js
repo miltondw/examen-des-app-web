@@ -1,77 +1,59 @@
-const PRODUCTS_KEY = "app_products_v1";
-const RESERVATIONS_KEY = "app_reservations_v1";
-
-async function seedProductsIfNeeded() {
-  const existing = localStorage.getItem(PRODUCTS_KEY);
-  if (existing) return JSON.parse(existing);
-
-  try {
-    const res = await fetch("/data/products.json");
-    const data = await res.json();
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(data));
-    return data;
-  } catch (e) {
-    console.error("No se pudo cargar products.json:", e);
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify([]));
-    return [];
-  }
-}
+const BASE_URL = "https://6a0e46811736097c3609a5f9.mockapi.io/api/v1";
 
 export async function getProducts() {
-  await seedProductsIfNeeded();
-  return JSON.parse(localStorage.getItem(PRODUCTS_KEY) || "[]");
+  const res = await fetch(`${BASE_URL}/movies`);
+  return await res.json();
 }
 
 export async function createProduct(product) {
-  const list = await getProducts();
-  const id = (list.reduce((m, p) => Math.max(m, p.id), 0) || 0) + 1;
-  const newItem = { ...product, id };
-  list.push(newItem);
-  localStorage.setItem(PRODUCTS_KEY, JSON.stringify(list));
-  return newItem;
+  const res = await fetch(`${BASE_URL}/movies`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(product)
+  });
+  return await res.json();
 }
 
 export async function updateProduct(id, changes) {
-  const list = await getProducts();
-  const idx = list.findIndex((p) => p.id === id);
-  if (idx === -1) throw new Error("Producto no encontrado");
-  list[idx] = { ...list[idx], ...changes };
-  localStorage.setItem(PRODUCTS_KEY, JSON.stringify(list));
-  return list[idx];
+  const res = await fetch(`${BASE_URL}/movies/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(changes)
+  });
+  return await res.json();
 }
 
 export async function deleteProduct(id) {
-  const list = await getProducts();
-  const filtered = list.filter((p) => p.id !== id);
-  localStorage.setItem(PRODUCTS_KEY, JSON.stringify(filtered));
-  return true;
+  const res = await fetch(`${BASE_URL}/movies/${id}`, { method: 'DELETE' });
+  return res.ok;
 }
 
 export async function getReservations() {
-  return JSON.parse(localStorage.getItem(RESERVATIONS_KEY) || "[]");
+  const res = await fetch(`${BASE_URL}/reservations`);
+  return await res.json();
 }
 
 export async function createReservation(reservation) {
-  const list = await getReservations();
-  const id = (list.reduce((m, r) => Math.max(m, r.id), 0) || 0) + 1;
-  const item = { id, ...reservation };
-  list.push(item);
-  localStorage.setItem(RESERVATIONS_KEY, JSON.stringify(list));
-  return item;
+  const res = await fetch(`${BASE_URL}/reservations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(reservation)
+  });
+  return await res.json();
 }
-
 export async function getReservationsByMovie(movieId) {
-  const list = await getReservations();
-  return list.filter((r) => r.movieId === movieId);
+  const res = await fetch(`${BASE_URL}/reservations?movieId=${movieId}`);
+  return await res.json();
 }
 
-export default {
-  seedProductsIfNeeded,
+const apiService = {
   getProducts,
   createProduct,
   updateProduct,
   deleteProduct,
   getReservations,
   createReservation,
-  getReservationsByMovie,
+  getReservationsByMovie
 };
+
+export default apiService;

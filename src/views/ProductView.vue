@@ -249,7 +249,7 @@
 </template>
 <script setup>
 import { computed, ref, onMounted } from 'vue'
-import api from '../services/apiService'
+import * as api from '../services/apiService'
 import { Modal, SeatSelector, FormModal, ConfirmDialog, SuccessModal } from '@/components'
 import { formatShowtime, formatMoney } from '../utils/time'
 

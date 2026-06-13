@@ -66,22 +66,28 @@ const router = useRouter()
 async function submit() {
   error.value = ''
   loading.value = true
-    try {
-      const res = await fetch('/data/users.json')
-      const users = await res.json()
-      const found = users.find((u) => u.username === username.value && u.password === password.value)
-      if (found) {
-        // Guardar sesion simulada
-        localStorage.setItem('current_user', JSON.stringify({ id: found.id, username: found.username, name: found.name, role: found.role }))
-        router.push('/dashboard')
-      } else {
-        error.value = 'Credenciales inválidas'
-      }
-    } catch (e) {
-      error.value = 'Error cargando usuarios'
-    } finally {
-      loading.value = false
+  try {
+    const res = await fetch('https://6a0e46811736097c3609a5f9.mockapi.io/api/v1/users')
+    const users = await res.json()
+    
+    const found = users.find((u) => u.username === username.value && u.password === password.value)
+    
+    if (found) {
+      localStorage.setItem('current_user', JSON.stringify({ 
+        id: found.id, 
+        username: found.username, 
+        name: found.name, 
+        role: found.role 
+      }))
+      router.push('/dashboard')
+    } else {
+      error.value = 'Credenciales inválidas'
     }
+  } catch (e) {
+    error.value = 'Error conectando con el servidor'
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
