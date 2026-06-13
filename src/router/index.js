@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 
 const LoginView = () => import("../views/LoginView.vue");
 const DashboardView = () => import("../views/DashboardView.vue");
-const ProductView = () => import("../views/ProductView.vue");
+const ProductView = () => import("../views/ProductView/index.vue");
 
 const routes = [
   { path: "/", redirect: "/login" },

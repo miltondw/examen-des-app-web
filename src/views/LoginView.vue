@@ -56,6 +56,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios' 
 
 const username = ref('')
 const password = ref('')
@@ -67,8 +68,9 @@ async function submit() {
   error.value = ''
   loading.value = true
   try {
-    const res = await fetch('https://6a0e46811736097c3609a5f9.mockapi.io/api/v1/users')
-    const users = await res.json()
+    // Usamos axios para consultar MockAPI
+    const res = await axios.get('https://6a0e46811736097c3609a5f9.mockapi.io/api/v1/users')
+    const users = res.data // Extraemos la data directamente
     
     const found = users.find((u) => u.username === username.value && u.password === password.value)
     
@@ -84,6 +86,7 @@ async function submit() {
       error.value = 'Credenciales inválidas'
     }
   } catch (e) {
+    console.error(e)
     error.value = 'Error conectando con el servidor'
   } finally {
     loading.value = false
