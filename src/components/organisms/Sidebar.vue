@@ -35,8 +35,7 @@ const menuItems = computed(() => {
   ]
   
   if (role.value === 'admin') {
-    baseItems.push(
-      { to: '/dashboard/reservas', label: 'Reservas', icon: '📋' }
+    baseItems.push(      { to: '/dashboard/usuarios', label: 'Usuarios', icon: '👥' },      { to: '/dashboard/reservas', label: 'Reservas', icon: '📋' }
     )
   }
   

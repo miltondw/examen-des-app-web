@@ -6,10 +6,7 @@
         <p class="text-muted">Sistema de Reservas de Entradas</p>
       </div>
 
-      <div v-if="error" class="alert alert-danger alert-dismissible fade show" role="alert">
-        {{ error }}
-        <button type="button" class="btn-close" @click="error = ''" aria-label="Close"></button>
-      </div>
+      <Alert v-if="error" type="danger" class="mb-4" @close="error = ''">{{ error }}</Alert>
 
       <form @submit.prevent="submit">
         <div class="mb-3">
@@ -56,6 +53,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { getUsers } from '@/services/apiService'
+import { Alert } from '@/components'
 
 const username = ref('')
 const password = ref('')
@@ -67,23 +66,23 @@ async function submit() {
   error.value = ''
   loading.value = true
   try {
-    const res = await fetch('https://6a0e46811736097c3609a5f9.mockapi.io/api/v1/users')
-    const users = await res.json()
-    
+    const users = await getUsers()
     const found = users.find((u) => u.username === username.value && u.password === password.value)
     
     if (found) {
       localStorage.setItem('current_user', JSON.stringify({ 
-        id: found.id, 
-        username: found.username, 
-        name: found.name, 
-        role: found.role 
+        id: found.id,
+        username: found.username,
+        name: found.name,
+        role: found.role,
+        token: `mock-token-${Date.now()}`
       }))
       router.push('/dashboard')
     } else {
       error.value = 'Credenciales inválidas'
     }
   } catch (e) {
+    console.error(e)
     error.value = 'Error conectando con el servidor'
   } finally {
     loading.value = false
