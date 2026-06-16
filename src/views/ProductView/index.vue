@@ -6,8 +6,14 @@
         <p class="text-muted mb-0">Administra cartelera, horarios, precios y reservas.</p>
       </div>
       <div v-if="role === 'admin'">
-        <button class="btn btn-success" @click="openCreate">+ Nueva película</button>
+        <button class="btn btn-success" @click="openCreate"><i class="bi bi-plus-circle me-2"></i> Nueva película</button>
       </div>
+    </div>
+
+ 
+
+    <div v-if="alertMessage" class="mb-4">
+      <Alert :type="alertType" @close="alertMessage = ''">{{ alertMessage }}</Alert>
     </div>
 
     <div class="row row-cols-1 row-cols-xl-2 g-4">
@@ -97,7 +103,7 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import * as api from '@/services/apiService'
-import { Modal, SeatSelector, FormModal, ConfirmDialog, SuccessModal } from '@/components'
+import { Alert, Modal, SeatSelector, FormModal, ConfirmDialog, SuccessModal, StatCard } from '@/components'
 import { formatShowtime, formatMoney } from '@/utils/time'
 import ProductCard from '@/components/products/ProductCard.vue'
 
@@ -113,6 +119,10 @@ const showForm = ref(false)
 const editId = ref(null)
 const editingMovie = ref(createEmptyMovie())
 const movieForm = editingMovie
+const usersCount = ref(0)
+const reservationsCount = ref(0)
+const alertMessage = ref('')
+const alertType = ref('success')
 const showSeatSelector = ref(false)
 const currentMovie = ref(null)
 const currentShowtime = ref('')
@@ -131,7 +141,15 @@ const showDeleteModal = ref(false)
 const deleteTarget = ref(null)
 
 async function load() {
-  products.value = await api.getProducts()
+  const [movies, users, reservations] = await Promise.all([
+    api.getProducts(),
+    api.getUsers(),
+    api.getReservations(),
+  ])
+
+  products.value = movies
+  usersCount.value = users.length
+  reservationsCount.value = reservations.length
 }
 
 onMounted(load)
@@ -149,16 +167,43 @@ function startEdit(p) {
 }
 
 async function saveMovie(movie) {
-  const payload = { ...movie, duration: Number(movie.duration) }
-  if (editId.value) await api.updateProduct(editId.value, payload)
-  else await api.createProduct(payload)
-  showForm.value = false
-  await load()
+  try {
+    const payload = { ...movie, duration: Number(movie.duration) }
+    if (editId.value) {
+      await api.updateProduct(editId.value, payload)
+      alertType.value = 'success'
+      alertMessage.value = 'Película actualizada correctamente.'
+    } else {
+      await api.createProduct(payload)
+      alertType.value = 'success'
+      alertMessage.value = 'Película creada correctamente.'
+    }
+  } catch (error) {
+    console.error(error)
+    alertType.value = 'danger'
+    alertMessage.value = 'Error al guardar la película. Intenta de nuevo.'
+  } finally {
+    showForm.value = false
+    await load()
+  }
 }
 
 function askDelete(movie) { deleteTarget.value = movie; showDeleteModal.value = true }
 function closeDeleteModal() { showDeleteModal.value = false; deleteTarget.value = null }
-async function confirmDelete() { await api.deleteProduct(deleteTarget.value.id); closeDeleteModal(); await load() }
+async function confirmDelete() {
+  try {
+    await api.deleteProduct(deleteTarget.value.id)
+    alertType.value = 'success'
+    alertMessage.value = 'Película eliminada correctamente.'
+  } catch (error) {
+    console.error(error)
+    alertType.value = 'danger'
+    alertMessage.value = 'Error al eliminar la película.'
+  } finally {
+    closeDeleteModal()
+    await load()
+  }
+}
 
 // Métodos de Cliente (Reservas)
 function openMovieModal(movie){ modalMovie.value = movie; showMovieModal.value = true }
@@ -174,11 +219,33 @@ function openSeatSelector(movie, showtime){
   currentMovie.value = movie
   currentShowtime.value = showtime
   const showtimeHour = typeof showtime === 'object' ? showtime.time : showtime
-  api.getReservationsByMovie(movie.id).then((list)=>{
-    const occ = list.filter(r=>r.showtime===showtimeHour).flatMap(r=>r.seats)
+  // Asegurar que tenemos un id válido; si no, intentar recargar y buscar por título
+  const movieId = movie?.id ?? products.value.find(m => m.title === movie.title)?.id
+  const ensureAndLoad = async () => {
+    let idToUse = movieId
+    if (!idToUse) {
+      console.warn('movie.id ausente, recargando lista de películas y buscando por título', movie?.title)
+      await load()
+      idToUse = products.value.find(m => m.title === movie.title)?.id
+      if (!idToUse) {
+        console.error('No se encontró id para la película:', movie)
+        return []
+      }
+    }
+    try {
+      const list = await api.getReservationsByMovie(idToUse)
+      return list
+    } catch (e) {
+      console.error('Error cargando reservas:', e)
+      return []
+    }
+  }
+
+  ensureAndLoad().then((list) => {
+    const occ = list.filter(r => r.showtime === showtimeHour).flatMap(r => r.seats)
     occupiedSeats.value = occ
     showSeatSelector.value = true
-  }).catch(e => console.error("Error cargando reservas:", e)) // Manejo de errores agregado
+  })
 }
 
 function handleToggleSeat(seat) {
@@ -192,9 +259,18 @@ function closeSuccessModal() { showSuccessModal.value = false; selectedSeats.val
 
 async function confirmSeats(selected){
   const user = JSON.parse(localStorage.getItem('current_user'))
-  if (!user) return alert('Debe iniciar sesión')
-  if (selected.length > 6 || selected.length === 0) return alert('Selecciona entre 1 y 6 puestos')
-  
+  if (!user) {
+    alertType.value = 'warning'
+    alertMessage.value = 'Debes iniciar sesión para reservar.'
+    return
+  }
+
+  if (selected.length > 6 || selected.length === 0) {
+    alertType.value = 'warning'
+    alertMessage.value = 'Selecciona entre 1 y 6 puestos.'
+    return
+  }
+
   const showtimeStr = typeof currentShowtime.value === 'object' ? currentShowtime.value.time : currentShowtime.value
   const showtimePrice = currentShowtime.value?.price ?? 0
   
@@ -217,7 +293,18 @@ async function confirmSeats(selected){
 
 async function viewReservations(movie){
   reservationsForMovie.value = movie
-  reservations.value = await api.getReservationsByMovie(movie.id)
+  // Similar guard: si falta id, recargar y buscar por título
+  let idToUse = movie?.id ?? products.value.find(m => m.title === movie.title)?.id
+  if (!idToUse) {
+    await load()
+    idToUse = products.value.find(m => m.title === movie.title)?.id
+  }
+  if (!idToUse) {
+    console.error('No se encontró id para la película al ver reservas:', movie)
+    reservations.value = []
+  } else {
+    reservations.value = await api.getReservationsByMovie(idToUse)
+  }
   showReservations.value = true
 }
 
