@@ -7,15 +7,49 @@ const api = axios.create({
   }
 });
 
+function getLocalReservations() {
+  if (typeof window === 'undefined' || !window.localStorage) return {}
+  try {
+    return JSON.parse(window.localStorage.getItem('local_reservations') || '{}')
+  } catch (err) {
+    console.error('Error leyendo las reservas locales:', err)
+    return {}
+  }
+}
+
+function saveLocalReservations(data) {
+  if (typeof window === 'undefined' || !window.localStorage) return
+  try {
+    window.localStorage.setItem('local_reservations', JSON.stringify(data))
+  } catch (err) {
+    console.error('Error guardando las reservas locales:', err)
+  }
+}
+
+function addLocalReservation(movieId, reservation) {
+  const local = getLocalReservations()
+  const key = String(movieId)
+  if (!Array.isArray(local[key])) local[key] = []
+  local[key].push(reservation)
+  saveLocalReservations(local)
+}
+
+async function getMovieById(movieId) {
+  const res = await api.get('/movies', { params: { id: movieId } })
+  const movies = res.data || []
+  return Array.isArray(movies) ? movies[0] : null
+}
+
 export async function getProducts() {
   const res = await api.get('/movies');
   const movies = res.data || []
+  const localReservations = getLocalReservations()
   // Normalizar para evitar errores cuando MockAPI no tenga campos esperados
   return movies.map((m, idx) => ({
     ...m,
     id: m.id,
     showtimes: Array.isArray(m.showtimes) ? m.showtimes.map((s, i) => ({ id: s.id ?? `st-${m.id}-${i}`, time: s.time, price: s.price, availableSeats: s.availableSeats })) : [],
-    reservations: Array.isArray(m.reservations) ? m.reservations : []
+    reservations: Array.isArray(m.reservations) ? [...m.reservations, ...(localReservations[String(m.id)] || [])] : [...(localReservations[String(m.id)] || [])]
   }))
 }
 
@@ -73,21 +107,32 @@ export async function deleteUser(id) {
 export async function getReservations() {
   const res = await api.get('/movies');
   const movies = res.data || [];
-  const reservations = movies.flatMap((movie) => (movie.reservations || []).map((reservation) => ({
-    ...reservation,
-    movieId: movie.id,
-    movieTitle: movie.title,
-  })));
+  const localReservations = getLocalReservations()
+  const reservations = movies.flatMap((movie) => {
+    const apiRes = (movie.reservations || []).map((reservation) => ({
+      ...reservation,
+      movieId: movie.id,
+      movieTitle: movie.title,
+    }))
+    const localRes = (localReservations[String(movie.id)] || []).map((reservation) => ({
+      ...reservation,
+      movieId: movie.id,
+      movieTitle: movie.title,
+    }))
+    return [...apiRes, ...localRes]
+  });
   return reservations;
 }
 
 export async function getReservationsByMovie(movieId) {
   try {
-    const res = await api.get(`/movies/${movieId}`);
-    return res.data.reservations || [];
+    const movie = await getMovieById(movieId)
+    const apiReservations = movie?.reservations || []
+    const localReservations = getLocalReservations()[String(movieId)] || []
+    return [...apiReservations, ...localReservations]
   } catch (e) {
-    console.error("Error al obtener reservas de la película:", e);
-    return [];
+    console.error('Error al obtener reservas de la película:', e)
+    return getLocalReservations()[String(movieId)] || []
   }
 }
 
@@ -99,8 +144,7 @@ export async function createReservation(reservation) {
     throw new Error('reservation.user.id is required to create a reservation')
   }
 
-  const movieRes = await api.get(`/movies/${reservation.movieId}`)
-  const movie = movieRes.data
+  const movie = await getMovieById(reservation.movieId)
 
   if (!movie) throw new Error('Movie not found')
   if (!Array.isArray(movie.reservations)) movie.reservations = []
@@ -113,8 +157,13 @@ export async function createReservation(reservation) {
 
   movie.reservations.push(newReservation)
 
-  // Update the whole movie object to preserve schema in MockAPI
-  await api.put(`/movies/${reservation.movieId}`, movie)
+  // Actualizar la película en MockAPI si es posible
+  try {
+    await api.put(`/movies/${movie.id}`, movie)
+  } catch (err) {
+    console.error('Error al guardar la reserva en MockAPI, usando almacenamiento local como fallback:', err)
+    addLocalReservation(movie.id, newReservation)
+  }
 
   try {
     const userRes = await api.get(`/users/${reservation.user.id}`)
